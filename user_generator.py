@@ -41,7 +41,7 @@ def generate_random_user():
     country_code = None
     country = None
 
-    email = "bebra"
+    email = database.get_first_free_email()
     proxy_id = None
 
     return (username, password, birthdate, phone_number, country_code, country, email, proxy_id)

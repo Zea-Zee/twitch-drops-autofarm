@@ -12,7 +12,7 @@ def create_tables() -> None:
         id INTEGER PRIMARY KEY,
         username TEXT UNIQUE,
         password TEXT,
-        is_created BOOLEAN,
+        status INT,
         birthday DATE,
         phone_number TEXT,
         country_code TEXT,
@@ -85,7 +85,7 @@ def add_user(username: str, password: str, birthdate: date, phone_number: str, c
     conn = sqlite3.connect('app.db')
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO users (username, password, is_created, birthday, phone_number, country_code, country, email, proxy_id)
+    INSERT INTO users (username, password, status, birthday, phone_number, country_code, country, email, proxy_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (username, password, False, birthdate, phone_number, country_code, country, email, proxy_id))
     conn.commit()
@@ -97,7 +97,7 @@ def add_users(users: list) -> None:
     cursor = conn.cursor()
 
     cursor.executemany('''
-    INSERT INTO users (username, password, is_created, birthdate, phone_number, country_code, country, email, proxy_id)
+    INSERT INTO users (username, password, status, birthdate, phone_number, country_code, country, email, proxy_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', [(user[0], user[1], False, user[2], user[3], user[4], user[5], user[6], user[7]) for user in users])
 
@@ -162,14 +162,14 @@ def add_emails(emails: list[str]) -> None:
     conn.close()
 
 
-def update_user_status(username: str) -> None:
+def update_user_status(username: str, new_status: int) -> None:
     conn = sqlite3.connect('app.db')
     cursor = conn.cursor()
     cursor.execute('''
     UPDATE users
-    SET is_created = ?
+    SET status = ?
     WHERE username = ?
-    ''', (True, username))
+    ''', (new_status, username))
     conn.commit()
     conn.close()
 
@@ -204,7 +204,70 @@ def get_all_users():
     return users
 
 
-def reset_database(drop_users: bool = False, drop_proxies: bool = False, drop_skin_packages: bool = False, drop_skins: bool = False, drop_user_skins: bool = False):
+def get_first_free_user():
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT *
+        FROM users
+        WHERE status = 0
+        LIMIT 1
+    ''')
+    free_user = cursor.fetchone()
+    update_user_status(free_user[1], 1)
+
+    conn.commit()
+    conn.close()
+    return free_user
+
+
+def get_first_free_email() -> str:
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT email
+        FROM emails
+        WHERE is_free = 1
+        LIMIT 1
+    ''')
+    result = cursor.fetchone()
+    free_email = result[0]
+
+    cursor.execute('''
+        UPDATE emails
+        SET is_free = 0
+        WHERE email = ?
+    ''', (free_email,))
+
+    conn.commit()
+    conn.close()
+    return free_email
+
+
+def clear_tables(drop_users: bool = False, drop_proxies: bool = False, drop_skin_packages: bool = False, drop_skins: bool = False, drop_user_skins: bool = False):
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+
+    if drop_users:
+        cursor.execute('DELETE FROM users')
+
+    if drop_proxies:
+        cursor.execute('DELETE FROM proxies')
+
+    if drop_skin_packages:
+        cursor.execute('DELETE FROM skin_packages')
+
+    if drop_skins:
+        cursor.execute('DELETE FROM skins')
+
+    if drop_user_skins:
+        cursor.execute('DELETE FROM user_skins')
+
+    conn.commit()
+    conn.close()
+
+
+def drop_tables(drop_users: bool = False, drop_proxies: bool = False, drop_skin_packages: bool = False, drop_skins: bool = False, drop_user_skins: bool = False):
     conn = sqlite3.connect('app.db')
     cursor = conn.cursor()
 
