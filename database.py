@@ -69,6 +69,14 @@ def create_tables() -> None:
     )
     ''')
 
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS emails (
+        id INTEGER PRIMARY KEY,
+        email TEXT,
+        is_free boolean
+    )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -77,9 +85,22 @@ def add_user(username: str, password: str, birthdate: date, phone_number: str, c
     conn = sqlite3.connect('app.db')
     cursor = conn.cursor()
     cursor.execute('''
-    INSERT INTO users (username, password, is_created, birthdate, phone_number, country_code, country, email, proxy_id)
+    INSERT INTO users (username, password, is_created, birthday, phone_number, country_code, country, email, proxy_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (username, password, False, birthdate, phone_number, country_code, country, email, proxy_id))
+    conn.commit()
+    conn.close()
+
+
+def add_users(users: list) -> None:
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+
+    cursor.executemany('''
+    INSERT INTO users (username, password, is_created, birthdate, phone_number, country_code, country, email, proxy_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', [(user[0], user[1], False, user[2], user[3], user[4], user[5], user[6], user[7]) for user in users])
+
     conn.commit()
     conn.close()
 
@@ -128,6 +149,19 @@ def add_user_skin(user_id: int, skin_id: int, is_obtained) -> None:
     conn.close()
 
 
+def add_emails(emails: list[str]) -> None:
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+
+    cursor.executemany('''
+    INSERT INTO emails (email, is_free)
+    VALUES (?, ?)
+    ''', [(email, True) for email in emails])
+
+    conn.commit()
+    conn.close()
+
+
 def update_user_status(username: str) -> None:
     conn = sqlite3.connect('app.db')
     cursor = conn.cursor()
@@ -136,6 +170,18 @@ def update_user_status(username: str) -> None:
     SET is_created = ?
     WHERE username = ?
     ''', (True, username))
+    conn.commit()
+    conn.close()
+
+
+def update_email_status(emails: list[str]) -> None:
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.executemany('''
+        UPDATE emails
+        SET is_free = 0
+        WHERE email = ?
+    ''', [(email, ) for email in emails])
     conn.commit()
     conn.close()
 
